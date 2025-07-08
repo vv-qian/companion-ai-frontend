@@ -1,0 +1,369 @@
+import { useEffect, useRef, useCallback } from "react";
+import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/contexts/AuthContext";
+
+interface Message {
+  id: string;
+  content: string;
+  sender: "user" | "ai";
+  timestamp: Date;
+  scriptures?: { reference: string; text: string }[];
+}
+
+interface UseConversationSyncProps {
+  messages: Message[];
+  conversationId?: string;
+  onConversationIdChange?: (id: string) => void;
+}
+
+export const useConversationSync = ({
+  messages,
+  conversationId,
+  onConversationIdChange,
+}: UseConversationSyncProps) => {
+  const { userUUID, isAuthenticated } = useAuth();
+  const lastSyncedCountRef = useRef(0);
+  const currentConversationIdRef = useRef<string | null>(
+    conversationId || null,
+  );
+  const syncTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const syncedMessageIdsRef = useRef<Set<string>>(new Set());
+  const isSyncingRef = useRef(false);
+  const isInitializedRef = useRef(false);
+
+  // Create or get conversation ID
+  const ensureConversationExists = useCallback(async (): Promise<
+    string | null
+  > => {
+    if (!userUUID || !isAuthenticated) return null;
+
+    // If we already have a conversation ID, return it
+    if (currentConversationIdRef.current) {
+      return currentConversationIdRef.current;
+    }
+
+    try {
+      console.log("looking for this UUID: ");
+      console.log(userUUID);
+      // First, ensure user exists in public.users table
+      const { data: existingUser } = await supabase
+        .from("users")
+        .select("id")
+        .eq("auth_user_id", userUUID)
+        .limit(1)
+        .single();
+
+      console.log(existingUser);
+
+      if (!existingUser) {
+        // Create user in public.users table
+        const { error: userError } = await supabase
+          .from("users")
+          .insert({ auth_user_id: userUUID });
+
+        if (userError) {
+          console.error("Error creating user:", userError);
+          return null;
+        }
+      }
+
+      // Create new conversation
+      const { data: conversation, error } = await supabase
+        .from("conversations")
+        .insert({
+          user_id:
+            existingUser?.id ||
+            (
+              await supabase
+                .from("users")
+                .select("id")
+                .eq("auth_user_id", userUUID)
+                .single()
+            ).data?.id,
+        })
+        .select("id")
+        .single();
+
+      if (error) {
+        console.error("Error creating conversation:", error);
+        return null;
+      }
+
+      currentConversationIdRef.current = conversation.id;
+      onConversationIdChange?.(conversation.id);
+      return conversation.id;
+    } catch (error) {
+      console.error("Error ensuring conversation exists:", error);
+      return null;
+    }
+  }, [userUUID, isAuthenticated, onConversationIdChange]);
+
+  // Initialize synced message IDs from database
+  const initializeSyncedMessages = useCallback(async () => {
+    if (!userUUID || !isAuthenticated) return;
+    if (isInitializedRef.current) return;
+
+    try {
+      const conversationId = await ensureConversationExists();
+      if (!conversationId) return;
+
+      // Get all message IDs that exist in the database for current messages
+      const messageIds = messages.map((m) => m.id);
+      if (messageIds.length === 0) {
+        isInitializedRef.current = true;
+        return;
+      }
+
+      const { data: existingMessages } = await supabase
+        .from("conversation_messages")
+        .select("id")
+        .eq("conversation_id", conversationId)
+        .in("id", messageIds);
+
+      // Mark existing messages as synced
+      if (existingMessages) {
+        existingMessages.forEach((msg) => {
+          syncedMessageIdsRef.current.add(msg.id);
+        });
+      }
+
+      isInitializedRef.current = true;
+      console.log(
+        `Initialized ${existingMessages?.length || 0} synced messages`,
+      );
+    } catch (error) {
+      console.error("Error initializing synced messages:", error);
+      // Still mark as initialized to prevent infinite retries
+      isInitializedRef.current = true;
+    }
+  }, [userUUID, isAuthenticated, messages, ensureConversationExists]);
+
+  // Sync messages to Supabase
+  const syncMessages = useCallback(
+    async (force = false) => {
+      if (!userUUID || !isAuthenticated || messages.length === 0) return;
+      if (isSyncingRef.current && !force) return; // Prevent concurrent syncs
+
+      // Initialize synced messages if not done yet
+      if (!isInitializedRef.current) {
+        await initializeSyncedMessages();
+      }
+
+      // Filter out messages that have already been synced
+      const messagesToSync = messages.filter(
+        (message) => !syncedMessageIdsRef.current.has(message.id),
+      );
+
+      if (messagesToSync.length === 0 && !force) return;
+
+      isSyncingRef.current = true;
+
+      try {
+        const conversationId = await ensureConversationExists();
+        if (!conversationId) return;
+
+        // Get user ID from public.users table
+        const { data: user } = await supabase
+          .from("users")
+          .select("id")
+          .eq("auth_user_id", userUUID)
+          .single();
+
+        if (!user) {
+          console.error("User not found in public.users table");
+          return;
+        }
+
+        // Double-check which messages already exist in the database to prevent duplicates
+        const messageIds = messagesToSync.map((m) => m.id);
+        const { data: existingMessages } = await supabase
+          .from("conversation_messages")
+          .select("id")
+          .eq("conversation_id", conversationId)
+          .in("id", messageIds);
+
+        const existingMessageIds = new Set(
+          existingMessages?.map((m) => m.id) || [],
+        );
+
+        // Filter out messages that already exist in the database
+        const newMessagesToSync = messagesToSync.filter(
+          (message) => !existingMessageIds.has(message.id),
+        );
+
+        if (newMessagesToSync.length === 0) {
+          // Mark all messages as synced even if they already existed
+          messagesToSync.forEach((message) => {
+            syncedMessageIdsRef.current.add(message.id);
+          });
+          lastSyncedCountRef.current = messages.length;
+          return;
+        }
+
+        // Prepare messages for insertion with their original IDs
+        const messagesToInsert = newMessagesToSync.map((message) => ({
+          id: message.id, // Use the original message ID to prevent duplicates
+          user_id: user.id,
+          conversation_id: conversationId,
+          role: message.sender,
+          content: message.content,
+          created_at: message.timestamp.toISOString(),
+        }));
+
+        const { error } = await supabase
+          .from("conversation_messages")
+          .insert(messagesToInsert);
+
+        if (error) {
+          console.error("Error syncing messages:", error);
+        } else {
+          // Mark messages as synced
+          newMessagesToSync.forEach((message) => {
+            syncedMessageIdsRef.current.add(message.id);
+          });
+          lastSyncedCountRef.current = messages.length;
+          console.log(
+            `Synced ${messagesToInsert.length} new messages to Supabase`,
+          );
+        }
+      } catch (error) {
+        console.error("Error in syncMessages:", error);
+      } finally {
+        isSyncingRef.current = false;
+      }
+    },
+    [
+      messages,
+      userUUID,
+      isAuthenticated,
+      ensureConversationExists,
+      initializeSyncedMessages,
+    ],
+  );
+
+  // Initialize synced messages when messages change or conversation changes
+  useEffect(() => {
+    if (
+      userUUID &&
+      isAuthenticated &&
+      messages.length > 0 &&
+      !isInitializedRef.current &&
+      (conversationId || currentConversationIdRef.current)
+    ) {
+      initializeSyncedMessages();
+    }
+  }, [
+    messages,
+    userUUID,
+    isAuthenticated,
+    conversationId,
+    initializeSyncedMessages,
+  ]);
+
+  // Reset initialization when user changes or when conversation changes
+  useEffect(() => {
+    if (conversationId !== currentConversationIdRef.current) {
+      // Force sync current messages before switching conversations
+      if (currentConversationIdRef.current && messages.length > 0) {
+        syncMessages(true);
+      }
+
+      // Reset state for new conversation
+      isInitializedRef.current = false;
+      syncedMessageIdsRef.current.clear();
+      lastSyncedCountRef.current = 0;
+      currentConversationIdRef.current = conversationId || null;
+    }
+  }, [userUUID, conversationId, messages, syncMessages]);
+
+  // Reset when user changes
+  useEffect(() => {
+    isInitializedRef.current = false;
+    syncedMessageIdsRef.current.clear();
+    lastSyncedCountRef.current = 0;
+    currentConversationIdRef.current = null;
+  }, [userUUID]);
+
+  // Sync every 5 messages
+  useEffect(() => {
+    const unsyncedMessages = messages.filter(
+      (message) => !syncedMessageIdsRef.current.has(message.id),
+    );
+
+    if (unsyncedMessages.length >= 5) {
+      syncMessages();
+    }
+  }, [messages, syncMessages]);
+
+  // Debounced sync for smaller batches
+  useEffect(() => {
+    if (syncTimeoutRef.current) {
+      clearTimeout(syncTimeoutRef.current);
+    }
+
+    // Sync after 30 seconds of inactivity if there are unsynced messages
+    const unsyncedMessages = messages.filter(
+      (message) => !syncedMessageIdsRef.current.has(message.id),
+    );
+
+    if (unsyncedMessages.length > 0 && unsyncedMessages.length < 5) {
+      syncTimeoutRef.current = setTimeout(() => {
+        syncMessages();
+      }, 30000);
+    }
+
+    return () => {
+      if (syncTimeoutRef.current) {
+        clearTimeout(syncTimeoutRef.current);
+      }
+    };
+  }, [messages, syncMessages]);
+
+  // Sync on page unload/navigation away
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      const unsyncedMessages = messages.filter(
+        (message) => !syncedMessageIdsRef.current.has(message.id),
+      );
+      if (unsyncedMessages.length > 0) {
+        // Force immediate sync on page unload
+        syncMessages(true);
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "hidden") {
+        const unsyncedMessages = messages.filter(
+          (message) => !syncedMessageIdsRef.current.has(message.id),
+        );
+        if (unsyncedMessages.length > 0) {
+          syncMessages(true);
+        }
+      }
+    };
+
+    const handleBeforeSignOut = () => {
+      syncMessages(true);
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("beforeSignOut", handleBeforeSignOut);
+
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("beforeSignOut", handleBeforeSignOut);
+    };
+  }, [messages, userUUID, syncMessages]);
+
+  // Manual sync function
+  const forceSyncMessages = useCallback(() => {
+    syncMessages(true);
+  }, [syncMessages]);
+
+  return {
+    syncMessages: forceSyncMessages,
+    conversationId: currentConversationIdRef.current,
+  };
+};

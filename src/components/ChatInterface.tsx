@@ -1,0 +1,377 @@
+import React, { useState, useEffect } from "react";
+import { Send, Book, BookOpen, Calendar, Loader2 } from "lucide-react";
+import { Button } from "./ui/button";
+import { Input } from "./ui/input";
+import { Card } from "./ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
+import { useAuth } from "@/contexts/AuthContext";
+import { useConversationSync } from "@/hooks/useConversationSync";
+import axios from "axios";
+
+interface Message {
+  id: string;
+  content: string;
+  sender: "user" | "ai";
+  timestamp: Date;
+  scriptures?: { reference: string; text: string }[];
+}
+
+interface MessageBubbleProps {
+  message: Message;
+}
+
+// Inline MessageBubble component since there seems to be an issue with importing it
+const MessageBubble = ({ message }: MessageBubbleProps) => {
+  const isBot = message.sender === "ai";
+
+  return (
+    <div className={`flex ${isBot ? "justify-start" : "justify-end"}`}>
+      <div
+        className={`max-w-[80%] rounded-lg p-3 ${
+          isBot ? "bg-blue-50 text-gray-800" : "bg-blue-600 text-white"
+        }`}
+      >
+        <div className="text-sm prose prose-sm max-w-none">
+          {message.content}
+        </div>
+        {isBot && message.scriptures && message.scriptures.length > 0 && (
+          <div className="mt-2 pt-2 border-t border-blue-100">
+            {message.scriptures.map((scripture, index) => (
+              <div key={index} className="text-xs">
+                <span className="font-semibold">{scripture.reference}</span>:{" "}
+                {scripture.text}
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div className="text-xs mt-1 opacity-70 text-right">
+          {message.timestamp.toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+          })}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+interface ChatInterfaceProps {
+  className?: string;
+  selectedConversationId?: string | null;
+  loadedMessages?: Message[] | null;
+}
+
+const ChatInterface = React.forwardRef<
+  { loadConversation: (conversationId: string, messages: Message[]) => void },
+  ChatInterfaceProps
+>(({ className = "", selectedConversationId, loadedMessages }, ref) => {
+  const { userUUID } = useAuth();
+
+  // Default welcome message
+  const getDefaultMessages = (): Message[] => [
+    {
+      id: crypto.randomUUID(),
+      content:
+        "Welcome to Companion AI. How may I assist you on your faith journey today?",
+      sender: "ai",
+      timestamp: new Date(),
+    },
+  ];
+
+  const [messages, setMessages] = useState<Message[]>(getDefaultMessages);
+  const [inputMessage, setInputMessage] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [conversationId, setConversationId] = useState<string | null>(
+    selectedConversationId || null,
+  );
+  const [messagesLoaded, setMessagesLoaded] = useState(false);
+  const [isLoadingConversation, setIsLoadingConversation] = useState(false);
+
+  // Function to load a past conversation
+  const loadConversation = React.useCallback(
+    (newConversationId: string, newMessages: Message[]) => {
+      setIsLoadingConversation(true);
+
+      // Force sync current messages before switching
+      syncMessages();
+
+      // Update conversation state
+      setConversationId(newConversationId);
+      setMessages(newMessages);
+
+      // Clear localStorage for current user and save new messages
+      if (userUUID) {
+        localStorage.setItem(
+          `companionai-messages-${userUUID}`,
+          JSON.stringify(newMessages),
+        );
+      }
+
+      setIsLoadingConversation(false);
+    },
+    [userUUID],
+  );
+
+  // Expose loadConversation function via ref
+  React.useImperativeHandle(
+    ref,
+    () => ({
+      loadConversation,
+    }),
+    [loadConversation],
+  );
+
+  // Initialize conversation sync - always call with consistent parameters
+  const { syncMessages } = useConversationSync({
+    messages,
+    conversationId: conversationId ?? undefined,
+    onConversationIdChange: setConversationId,
+  });
+
+  // Load messages from localStorage on component mount (only if no conversation is being loaded)
+  useEffect(() => {
+    if (
+      userUUID &&
+      !messagesLoaded &&
+      !selectedConversationId &&
+      !loadedMessages
+    ) {
+      try {
+        const savedMessages = localStorage.getItem(
+          `companionai-messages-${userUUID}`,
+        );
+        if (savedMessages) {
+          const parsed = JSON.parse(savedMessages);
+          // Convert timestamp strings back to Date objects
+          const loadedMessages = parsed.map((msg: any) => ({
+            ...msg,
+            timestamp: new Date(msg.timestamp),
+          }));
+          setMessages(loadedMessages);
+        }
+      } catch (error) {
+        console.error("Error loading messages from localStorage:", error);
+      }
+      setMessagesLoaded(true);
+    } else if (selectedConversationId && loadedMessages) {
+      // If a conversation is being loaded from props, use those messages
+      setMessages(loadedMessages);
+      setConversationId(selectedConversationId);
+      setMessagesLoaded(true);
+    } else if (!selectedConversationId && !loadedMessages && !messagesLoaded) {
+      setMessagesLoaded(true);
+    }
+  }, [userUUID, messagesLoaded, selectedConversationId, loadedMessages]);
+
+  // Save messages to localStorage whenever messages change
+  useEffect(() => {
+    if (userUUID && messagesLoaded) {
+      try {
+        localStorage.setItem(
+          `companionai-messages-${userUUID}`,
+          JSON.stringify(messages),
+        );
+      } catch (error) {
+        console.error("Error saving messages to localStorage:", error);
+      }
+    }
+  }, [messages, userUUID, messagesLoaded]);
+
+  // Load input message from localStorage on component mount
+  useEffect(() => {
+    if (userUUID) {
+      try {
+        const savedInput = localStorage.getItem(
+          `companionai-input-${userUUID}`,
+        );
+        if (savedInput) {
+          setInputMessage(savedInput);
+        }
+      } catch (error) {
+        console.error("Error loading input from localStorage:", error);
+      }
+    }
+  }, [userUUID]);
+
+  // Save input message to localStorage whenever it changes
+  useEffect(() => {
+    if (userUUID) {
+      try {
+        localStorage.setItem(`companionai-input-${userUUID}`, inputMessage);
+      } catch (error) {
+        console.error("Error saving input to localStorage:", error);
+      }
+    }
+  }, [inputMessage, userUUID]);
+
+  // Initialize backend client
+  const client = axios.create({
+    baseURL: "https://backend-misty-log-8835.fly.dev",
+    headers: {
+      "Content-Type": "application/json",
+    },
+  });
+
+  const handleSendMessage = async () => {
+    if (inputMessage.trim() === "" || isLoading) return;
+
+    // Add user message
+    const newUserMessage: Message = {
+      id: crypto.randomUUID(),
+      content: inputMessage,
+      sender: "user",
+      timestamp: new Date(),
+    };
+    setInputMessage("");
+    // Clear the saved input since message is being sent
+    if (userUUID) {
+      localStorage.removeItem(`companionai-input-${userUUID}`);
+    }
+    setMessages((prev) => [...prev, newUserMessage]);
+    setIsLoading(true);
+
+    // Send request to LLM
+    try {
+      const response = await client.post("/query", {
+        user_input: newUserMessage.content,
+        message_history: messages.slice(-10),
+      });
+
+      const botResponse: Message = {
+        id: crypto.randomUUID(),
+        content: response.data.response,
+        sender: "ai",
+        timestamp: new Date(),
+      };
+
+      setMessages((prev) => [...prev, botResponse]);
+    } catch (error) {
+      console.error("Error calling Qdrant API:", error);
+      // Add error message to chat
+      const errorMessage: Message = {
+        id: crypto.randomUUID(),
+        content:
+          "I apologize, but I'm having trouble connecting right now. Please try again in a moment.",
+        sender: "ai",
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, errorMessage]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleQuickAction = (action: string) => {
+    let actionMessage = "";
+
+    switch (action) {
+      case "prayer":
+        actionMessage = "I need prayer support today.";
+        break;
+      case "verse":
+        actionMessage = "Share a daily verse with me, please.";
+        break;
+      case "question":
+        actionMessage = "I have a question about the Bible.";
+        break;
+      default:
+        actionMessage = "";
+    }
+
+    if (actionMessage) {
+      setInputMessage(actionMessage);
+    }
+  };
+
+  return (
+    <Card className={`flex flex-col h-full bg-white ${className}`}>
+      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        {isLoadingConversation ? (
+          <div className="flex items-center justify-center h-full">
+            <div className="text-center">
+              <Loader2 className="h-8 w-8 animate-spin text-blue-600 mx-auto mb-4" />
+              <p className="text-gray-600">Loading conversation...</p>
+            </div>
+          </div>
+        ) : (
+          <>
+            {messages.map((message) => (
+              <MessageBubble key={message.id} message={message} />
+            ))}
+            {isLoading && (
+              <div className="flex justify-start">
+                <div className="max-w-[80%] rounded-lg p-3 bg-blue-50 text-gray-800">
+                  <div className="flex items-center space-x-2">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span className="text-sm">Seeking guidance...</span>
+                  </div>
+                </div>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+
+      <div className="p-4 border-t border-gray-200">
+        <div className="mb-3">
+          <Tabs defaultValue="quick">
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger
+                value="quick"
+                onClick={() => handleQuickAction("prayer")}
+              >
+                <BookOpen className="h-4 w-4 mr-2" />
+                Prayer Request
+              </TabsTrigger>
+              <TabsTrigger
+                value="verse"
+                onClick={() => handleQuickAction("verse")}
+              >
+                <Book className="h-4 w-4 mr-2" />
+                Daily Verse
+              </TabsTrigger>
+              <TabsTrigger
+                value="question"
+                onClick={() => handleQuickAction("question")}
+              >
+                <Calendar className="h-4 w-4 mr-2" />
+                Biblical Question
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
+
+        <div className="flex space-x-2">
+          <Input
+            value={inputMessage}
+            onChange={(e) => setInputMessage(e.target.value)}
+            placeholder={
+              isLoading
+                ? "Waiting for response..."
+                : "Type your message here..."
+            }
+            className="flex-1"
+            disabled={isLoading}
+            onKeyDown={(e) => e.key === "Enter" && handleSendMessage()}
+          />
+          <Button
+            onClick={handleSendMessage}
+            className="bg-blue-600 hover:bg-blue-700"
+            disabled={isLoading}
+          >
+            {isLoading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Send className="h-4 w-4" />
+            )}
+          </Button>
+        </div>
+      </div>
+    </Card>
+  );
+});
+
+ChatInterface.displayName = "ChatInterface";
+
+export default ChatInterface;
