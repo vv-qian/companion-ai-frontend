@@ -76,6 +76,7 @@ const ChatInterface = React.forwardRef<
         "Welcome to Companion AI. How may I assist you on your faith journey today?",
       sender: "ai",
       timestamp: new Date(),
+      isBoilerplate: true,
     },
   ];
 
@@ -87,6 +88,20 @@ const ChatInterface = React.forwardRef<
   );
   const [messagesLoaded, setMessagesLoaded] = useState(false);
   const [isLoadingConversation, setIsLoadingConversation] = useState(false);
+
+  const scrollRef = React.useRef<HTMLDivElement | null>(null);
+  const scrollToBottom = () => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  };
+
+  // Trigger scrollToBottom when messages or isLoadingConversation changes
+  useEffect(() => {
+    if (!isLoadingConversation) {
+      scrollToBottom();
+    }
+  }, [messages, isLoadingConversation]);
 
   // Function to load a past conversation
   const loadConversation = React.useCallback(
@@ -311,6 +326,8 @@ const ChatInterface = React.forwardRef<
             )}
           </>
         )}
+        {/* Sentinel div */}
+        <div ref={scrollRef} />
       </div>
 
       <div className="p-4 border-t border-gray-200">

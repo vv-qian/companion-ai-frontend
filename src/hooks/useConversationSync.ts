@@ -16,6 +16,8 @@ interface UseConversationSyncProps {
   onConversationIdChange?: (id: string) => void;
 }
 
+const isBoilerplateMessage = (message: Message) => message.isBoilerplate;
+
 export const useConversationSync = ({
   messages,
   conversationId,
@@ -151,7 +153,9 @@ export const useConversationSync = ({
 
       // Filter out messages that have already been synced
       const messagesToSync = messages.filter(
-        (message) => !syncedMessageIdsRef.current.has(message.id),
+        (message) =>
+          !syncedMessageIdsRef.current.has(message.id) &&
+          !isBoilerplateMessage(message),
       );
 
       if (messagesToSync.length === 0 && !force) return;
@@ -159,6 +163,15 @@ export const useConversationSync = ({
       isSyncingRef.current = true;
 
       try {
+        const realMessagesExist = messages.some(
+          (msg) => !isBoilerplateMessage(msg),
+        );
+
+        if (!realMessagesExist) {
+          // nothing meaningful to sync yet; skip creating conversation
+          return;
+        }
+
         const conversationId = await ensureConversationExists();
         if (!conversationId) return;
 

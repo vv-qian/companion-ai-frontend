@@ -187,7 +187,11 @@ const SidebarNavigation = ({
               >
                 <CardContent
                   className="p-3"
-                  onClick={() => onConversationSelect(conversation.id)}
+                  onClick={() => {
+                    console.log("in sidebarnavigation");
+                    console.log(conversation);
+                    onConversationSelect(conversation.id);
+                  }}
                 >
                   <h3 className="font-medium text-gray-800">
                     {conversation.title}
