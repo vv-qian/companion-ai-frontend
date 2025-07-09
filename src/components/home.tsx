@@ -44,7 +44,7 @@ export default function Home() {
   }
 
   if (!loading && !isAuthenticated) {
-    return <LoginPage onAuthSuccess={() => window.location.reload()} />;
+    return <LoginPage />;
   }
 
   const loadPastConversation = async (conversationId: string) => {
@@ -142,8 +142,8 @@ export default function Home() {
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 w-full mx-auto p-4 flex flex-col md:flex-row gap-6">
-        <Card className="flex-1 h-[700px] overflow-hidden shadow-md">
+      <main className="flex-1 w-full mx-auto p-4 flex flex-col md:flex-row gap-6 overflow-hidden">
+        <Card className="flex-1 min-h-0 overflow-hidden shadow-md">
           <Tabs
             value={activeTab}
             onValueChange={setActiveTab}

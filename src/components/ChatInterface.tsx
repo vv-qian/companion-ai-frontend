@@ -222,7 +222,7 @@ const ChatInterface = React.forwardRef<
 
   // Initialize backend client
   const client = axios.create({
-    baseURL: "https://backend-misty-log-8835.fly.dev",
+    baseURL: import.meta.env.BACKEND_SERVER_URL,
     headers: {
       "Content-Type": "application/json",
     },

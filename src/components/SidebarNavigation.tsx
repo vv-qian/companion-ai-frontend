@@ -188,8 +188,6 @@ const SidebarNavigation = ({
                 <CardContent
                   className="p-3"
                   onClick={() => {
-                    console.log("in sidebarnavigation");
-                    console.log(conversation);
                     onConversationSelect(conversation.id);
                   }}
                 >

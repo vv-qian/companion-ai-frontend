@@ -45,8 +45,6 @@ export const useConversationSync = ({
     }
 
     try {
-      console.log("looking for this UUID: ");
-      console.log(userUUID);
       // First, ensure user exists in public.users table
       const { data: existingUser } = await supabase
         .from("users")
@@ -54,8 +52,6 @@ export const useConversationSync = ({
         .eq("auth_user_id", userUUID)
         .limit(1)
         .single();
-
-      console.log(existingUser);
 
       if (!existingUser) {
         // Create user in public.users table
@@ -187,35 +183,40 @@ export const useConversationSync = ({
           return;
         }
 
-        // Double-check which messages already exist in the database to prevent duplicates
         const messageIds = messagesToSync.map((m) => m.id);
-        const { data: existingMessages } = await supabase
+
+        const { data: existingMessages, error: existingError } = await supabase
           .from("conversation_messages")
           .select("id")
           .eq("conversation_id", conversationId)
           .in("id", messageIds);
 
+        if (existingError) {
+          console.error("Error checking existing messages:", existingError);
+          isSyncingRef.current = false;
+          return;
+        }
+
         const existingMessageIds = new Set(
           existingMessages?.map((m) => m.id) || [],
         );
 
-        // Filter out messages that already exist in the database
+        // Always mark existing ones as synced
+        existingMessageIds.forEach((id) => syncedMessageIdsRef.current.add(id));
+
         const newMessagesToSync = messagesToSync.filter(
           (message) => !existingMessageIds.has(message.id),
         );
 
         if (newMessagesToSync.length === 0) {
-          // Mark all messages as synced even if they already existed
-          messagesToSync.forEach((message) => {
-            syncedMessageIdsRef.current.add(message.id);
-          });
+          console.log("No new messages to sync; all already present.");
           lastSyncedCountRef.current = messages.length;
+          isSyncingRef.current = false;
           return;
         }
 
-        // Prepare messages for insertion with their original IDs
-        const messagesToInsert = newMessagesToSync.map((message) => ({
-          id: message.id, // Use the original message ID to prevent duplicates
+        const messagesToUpsert = newMessagesToSync.map((message) => ({
+          id: message.id,
           user_id: user.id,
           conversation_id: conversationId,
           role: message.sender,
@@ -223,20 +224,19 @@ export const useConversationSync = ({
           created_at: message.timestamp.toISOString(),
         }));
 
-        const { error } = await supabase
+        const { error: upsertError } = await supabase
           .from("conversation_messages")
-          .insert(messagesToInsert);
+          .upsert(messagesToUpsert, { onConflict: "id" });
 
-        if (error) {
-          console.error("Error syncing messages:", error);
+        if (upsertError) {
+          console.error("Error upserting messages:", upsertError);
         } else {
-          // Mark messages as synced
           newMessagesToSync.forEach((message) => {
             syncedMessageIdsRef.current.add(message.id);
           });
           lastSyncedCountRef.current = messages.length;
           console.log(
-            `Synced ${messagesToInsert.length} new messages to Supabase`,
+            `Upserted ${messagesToUpsert.length} new messages to Supabase`,
           );
         }
       } catch (error) {
