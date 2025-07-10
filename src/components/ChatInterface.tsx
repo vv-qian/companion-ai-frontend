@@ -8,6 +8,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useConversationSync } from "@/hooks/useConversationSync";
 import axios from "axios";
 
+const backendUrl = import.meta.env.VITE_BACKEND_SERVER_URL;
+
 interface Message {
   id: string;
   content: string;
@@ -222,7 +224,7 @@ const ChatInterface = React.forwardRef<
 
   // Initialize backend client
   const client = axios.create({
-    baseURL: import.meta.env.BACKEND_SERVER_URL,
+    baseURL: backendUrl,
     headers: {
       "Content-Type": "application/json",
     },

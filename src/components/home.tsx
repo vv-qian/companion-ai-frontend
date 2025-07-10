@@ -2,7 +2,7 @@ import React, { useState, useRef } from "react";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { LogOut, Loader2 } from "lucide-react";
+import { LogOut, Loader2, Plus } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import ChatInterface from "./ChatInterface";
@@ -104,6 +104,27 @@ export default function Home() {
     }
   };
 
+  const startNewChat = () => {
+    // Clear the current conversation state
+    setSelectedConversationId(null);
+    setLoadedMessages(null);
+    setConversationError(null);
+
+    // Clear localStorage for the current user to reset to default messages
+    if (userUUID) {
+      localStorage.removeItem(`companionai-messages-${userUUID}`);
+      localStorage.removeItem(`companionai-input-${userUUID}`);
+    }
+
+    // Switch to chat tab and force a refresh of the chat interface
+    setActiveTab("chat");
+
+    // Force the chat interface to reset by triggering a re-render
+    setTimeout(() => {
+      window.location.reload();
+    }, 100);
+  };
+
   if (error) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -127,6 +148,15 @@ export default function Home() {
         <div className="flex items-center justify-between">
           <h1 className="text-xl font-semibold text-gray-800">CompanionAI</h1>
           <div className="flex items-center space-x-4">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={startNewChat}
+              className="flex items-center space-x-1 bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200"
+            >
+              <Plus className="h-4 w-4" />
+              <span>New Chat</span>
+            </Button>
             <div className="text-sm text-gray-500">{user && user.email}</div>
             <Button
               variant="outline"
