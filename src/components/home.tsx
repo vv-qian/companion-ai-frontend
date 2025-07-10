@@ -121,7 +121,7 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="h-screen flex flex-col">
       {/* Header */}
       <header className="bg-white shadow-sm py-4 px-6 border-b">
         <div className="flex items-center justify-between">
