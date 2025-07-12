@@ -69,7 +69,6 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     };
 
     initializeAuth();
-    console.log(userUUID);
 
     // Listen for auth state changes
     const {
@@ -80,9 +79,6 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         setUserUUID(session.user.id);
         setIsAuthenticated(true);
         setError(null);
-        console.log("userUUID");
-        console.log(userUUID);
-        console.log(session.user.id);
       } else if (event === "SIGNED_OUT") {
         setUser(null);
         setUserUUID(null);
