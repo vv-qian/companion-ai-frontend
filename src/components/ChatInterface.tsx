@@ -92,18 +92,19 @@ const ChatInterface = React.forwardRef<
   const [isLoadingConversation, setIsLoadingConversation] = useState(false);
 
   const scrollRef = React.useRef<HTMLDivElement | null>(null);
+
   const scrollToBottom = () => {
     if (scrollRef.current) {
       scrollRef.current.scrollIntoView({ behavior: "smooth" });
     }
   };
 
-  // Trigger scrollToBottom when messages or isLoadingConversation changes
-  useEffect(() => {
-    if (!isLoadingConversation) {
-      scrollToBottom();
-    }
-  }, [messages, isLoadingConversation]);
+  // Initialize conversation sync - always call with consistent parameters
+  const { syncMessages } = useConversationSync({
+    messages,
+    conversationId: conversationId ?? undefined,
+    onConversationIdChange: setConversationId,
+  });
 
   // Function to load a past conversation
   const loadConversation = React.useCallback(
@@ -115,6 +116,7 @@ const ChatInterface = React.forwardRef<
 
       // Update conversation state
       setConversationId(newConversationId);
+      console.log("newConversationId: ", newConversationId);
       setMessages(newMessages);
 
       // Clear localStorage for current user and save new messages
@@ -127,7 +129,7 @@ const ChatInterface = React.forwardRef<
 
       setIsLoadingConversation(false);
     },
-    [userUUID],
+    [userUUID, syncMessages],
   );
 
   // Expose loadConversation function via ref
@@ -139,12 +141,12 @@ const ChatInterface = React.forwardRef<
     [loadConversation],
   );
 
-  // Initialize conversation sync - always call with consistent parameters
-  const { syncMessages } = useConversationSync({
-    messages,
-    conversationId: conversationId ?? undefined,
-    onConversationIdChange: setConversationId,
-  });
+  // Trigger scrollToBottom when messages or isLoadingConversation changes
+  useEffect(() => {
+    if (!isLoadingConversation) {
+      scrollToBottom();
+    }
+  }, [messages, isLoadingConversation]);
 
   // Load messages from localStorage on component mount (only if no conversation is being loaded)
   useEffect(() => {
