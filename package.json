@@ -71,7 +71,7 @@
     "axios": "^1.10.0",
     "postcss": "^8.4.38",
     "tailwindcss": "3.4.1",
-    "tempo-devtools": "^2.0.108",
+    "tempo-devtools": "^2.0.109",
     "typescript": "^5.8.2",
     "vite": "^6.2.3"
   }

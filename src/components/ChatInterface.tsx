@@ -251,10 +251,17 @@ const ChatInterface = React.forwardRef<
     setIsLoading(true);
 
     // Send request to LLM
+    const simplified_messages = messages
+      .map(({ content, sender }) => ({
+        content,
+        sender,
+      }))
+      .slice(-20);
+
     try {
       const response = await client.post("/query", {
         user_input: newUserMessage.content,
-        message_history: messages.slice(-10),
+        message_history: simplified_messages,
       });
 
       const botResponse: Message = {
