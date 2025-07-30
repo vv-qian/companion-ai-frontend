@@ -6,6 +6,7 @@ import { Card } from "./ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { useAuth } from "@/contexts/AuthContext";
 import { useConversationSync } from "@/hooks/useConversationSync";
+import ReactMarkdown from "react-markdown";
 import axios from "axios";
 
 const backendUrl = import.meta.env.VITE_BACKEND_SERVER_URL;
@@ -34,7 +35,50 @@ const MessageBubble = ({ message }: MessageBubbleProps) => {
         }`}
       >
         <div className="text-sm prose prose-sm max-w-none">
-          {message.content}
+          {isBot ? (
+            <ReactMarkdown
+              className="markdown-content"
+              components={{
+                p: ({ children }) => (
+                  <p className="mb-2 last:mb-0">{children}</p>
+                ),
+                h1: ({ children }) => (
+                  <h1 className="text-lg font-bold mb-2">{children}</h1>
+                ),
+                h2: ({ children }) => (
+                  <h2 className="text-base font-bold mb-2">{children}</h2>
+                ),
+                h3: ({ children }) => (
+                  <h3 className="text-sm font-bold mb-1">{children}</h3>
+                ),
+                ul: ({ children }) => (
+                  <ul className="list-disc list-inside mb-2">{children}</ul>
+                ),
+                ol: ({ children }) => (
+                  <ol className="list-decimal list-inside mb-2">{children}</ol>
+                ),
+                li: ({ children }) => <li className="mb-1">{children}</li>,
+                strong: ({ children }) => (
+                  <strong className="font-semibold">{children}</strong>
+                ),
+                em: ({ children }) => <em className="italic">{children}</em>,
+                code: ({ children }) => (
+                  <code className="bg-blue-100 px-1 py-0.5 rounded text-xs">
+                    {children}
+                  </code>
+                ),
+                blockquote: ({ children }) => (
+                  <blockquote className="border-l-2 border-blue-300 pl-2 italic">
+                    {children}
+                  </blockquote>
+                ),
+              }}
+            >
+              {message.content}
+            </ReactMarkdown>
+          ) : (
+            message.content
+          )}
         </div>
         {isBot && message.scriptures && message.scriptures.length > 0 && (
           <div className="mt-2 pt-2 border-t border-blue-100">
