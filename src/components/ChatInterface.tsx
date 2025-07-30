@@ -105,7 +105,7 @@ const MessageBubble = ({ message }: MessageBubbleProps) => {
               {message.content}
             </Markdown>
           ) : (
-            message.content
+            <div className="text-white text-sm">{message.content}</div>
           )}
         </div>
         {isBot && message.scriptures && message.scriptures.length > 0 && (
