@@ -6,7 +6,7 @@ import { Card } from "./ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { useAuth } from "@/contexts/AuthContext";
 import { useConversationSync } from "@/hooks/useConversationSync";
-import ReactMarkdown from "react-markdown";
+import Markdown from "markdown-to-jsx";
 import axios from "axios";
 
 const backendUrl = import.meta.env.VITE_BACKEND_SERVER_URL;
@@ -36,46 +36,74 @@ const MessageBubble = ({ message }: MessageBubbleProps) => {
       >
         <div className="text-sm prose prose-sm max-w-none">
           {isBot ? (
-            <ReactMarkdown
-              className="markdown-content"
-              components={{
-                p: ({ children }) => (
-                  <p className="mb-2 last:mb-0">{children}</p>
-                ),
-                h1: ({ children }) => (
-                  <h1 className="text-lg font-bold mb-2">{children}</h1>
-                ),
-                h2: ({ children }) => (
-                  <h2 className="text-base font-bold mb-2">{children}</h2>
-                ),
-                h3: ({ children }) => (
-                  <h3 className="text-sm font-bold mb-1">{children}</h3>
-                ),
-                ul: ({ children }) => (
-                  <ul className="list-disc list-inside mb-2">{children}</ul>
-                ),
-                ol: ({ children }) => (
-                  <ol className="list-decimal list-inside mb-2">{children}</ol>
-                ),
-                li: ({ children }) => <li className="mb-1">{children}</li>,
-                strong: ({ children }) => (
-                  <strong className="font-semibold">{children}</strong>
-                ),
-                em: ({ children }) => <em className="italic">{children}</em>,
-                code: ({ children }) => (
-                  <code className="bg-blue-100 px-1 py-0.5 rounded text-xs">
-                    {children}
-                  </code>
-                ),
-                blockquote: ({ children }) => (
-                  <blockquote className="border-l-2 border-blue-300 pl-2 italic">
-                    {children}
-                  </blockquote>
-                ),
+            <Markdown
+              options={{
+                overrides: {
+                  p: {
+                    component: (props) => (
+                      <p className="mb-2 last:mb-0" {...props} />
+                    ),
+                  },
+                  h1: {
+                    component: (props) => (
+                      <h1 className="text-lg font-bold mb-2" {...props} />
+                    ),
+                  },
+                  h2: {
+                    component: (props) => (
+                      <h2 className="text-base font-bold mb-2" {...props} />
+                    ),
+                  },
+                  h3: {
+                    component: (props) => (
+                      <h3 className="text-sm font-bold mb-1" {...props} />
+                    ),
+                  },
+                  ul: {
+                    component: (props) => (
+                      <ul className="list-disc list-inside mb-2" {...props} />
+                    ),
+                  },
+                  ol: {
+                    component: (props) => (
+                      <ol
+                        className="list-decimal list-inside mb-2"
+                        {...props}
+                      />
+                    ),
+                  },
+                  li: {
+                    component: (props) => <li className="mb-1" {...props} />,
+                  },
+                  strong: {
+                    component: (props) => (
+                      <strong className="font-semibold" {...props} />
+                    ),
+                  },
+                  em: {
+                    component: (props) => <em className="italic" {...props} />,
+                  },
+                  code: {
+                    component: (props) => (
+                      <code
+                        className="bg-blue-100 px-1 py-0.5 rounded text-xs"
+                        {...props}
+                      />
+                    ),
+                  },
+                  blockquote: {
+                    component: (props) => (
+                      <blockquote
+                        className="border-l-2 border-blue-300 pl-2 italic"
+                        {...props}
+                      />
+                    ),
+                  },
+                },
               }}
             >
               {message.content}
-            </ReactMarkdown>
+            </Markdown>
           ) : (
             message.content
           )}
