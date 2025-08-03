@@ -4,7 +4,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { Search, Loader2 } from "lucide-react";
+import { Search, Loader2, Trash2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
@@ -37,6 +37,57 @@ const SidebarNavigation = ({
         ? firstMessage.substring(0, 50) + "..."
         : firstMessage;
     return title;
+  };
+
+  // Function to delete a conversation
+  const deleteConversation = async (conversationId: string) => {
+    if (!userUUID || !isAuthenticated) {
+      return;
+    }
+
+    try {
+      // First get the user's ID from the public.users table
+      const { data: userData, error: userError } = await supabase
+        .from("users")
+        .select("id")
+        .eq("auth_user_id", userUUID)
+        .single();
+
+      if (userError || !userData) {
+        console.error("Error fetching user:", userError);
+        return;
+      }
+
+      // Delete all messages for this conversation first
+      const { error: messagesError } = await supabase
+        .from("conversation_messages")
+        .delete()
+        .eq("conversation_id", conversationId);
+
+      if (messagesError) {
+        console.error("Error deleting messages:", messagesError);
+        return;
+      }
+
+      // Then delete the conversation
+      const { error: conversationError } = await supabase
+        .from("conversations")
+        .delete()
+        .eq("id", conversationId)
+        .eq("user_id", userData.id);
+
+      if (conversationError) {
+        console.error("Error deleting conversation:", conversationError);
+        return;
+      }
+
+      // Update the local state to remove the deleted conversation
+      setConversations((prev) =>
+        prev.filter((conv) => conv.id !== conversationId),
+      );
+    } catch (err) {
+      console.error("Error in deleteConversation:", err);
+    }
   };
 
   // Function to fetch conversations from Supabase
@@ -183,21 +234,34 @@ const SidebarNavigation = ({
             filteredConversations.map((conversation) => (
               <Card
                 key={conversation.id}
-                className="hover:bg-gray-50 cursor-pointer transition-colors"
+                className="hover:bg-gray-50 transition-colors group"
               >
-                <CardContent
-                  className="p-3"
-                  onClick={() => {
-                    onConversationSelect(conversation.id);
-                  }}
-                >
-                  <h3 className="font-medium text-gray-800">
-                    {conversation.title}
-                  </h3>
-                  <p className="text-xs text-gray-500">{conversation.date}</p>
-                  <p className="text-sm text-gray-600 mt-1 truncate">
-                    {conversation.preview}
-                  </p>
+                <CardContent className="p-3 relative">
+                  <div
+                    className="cursor-pointer"
+                    onClick={() => {
+                      onConversationSelect(conversation.id);
+                    }}
+                  >
+                    <h3 className="font-medium text-gray-800 pr-8">
+                      {conversation.title}
+                    </h3>
+                    <p className="text-xs text-gray-500">{conversation.date}</p>
+                    <p className="text-sm text-gray-600 mt-1 truncate">
+                      {conversation.preview}
+                    </p>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="absolute top-2 right-2 h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-100 hover:text-red-600"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      deleteConversation(conversation.id);
+                    }}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
                 </CardContent>
               </Card>
             ))

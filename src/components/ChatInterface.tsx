@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from "react";
-import { Send, Book, BookOpen, Calendar, Loader2 } from "lucide-react";
+import { Send, Loader2 } from "lucide-react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Card } from "./ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
+
 import { useAuth } from "@/contexts/AuthContext";
 import { useConversationSync } from "@/hooks/useConversationSync";
 import Markdown from "markdown-to-jsx";
@@ -360,28 +360,6 @@ const ChatInterface = React.forwardRef<
     }
   };
 
-  const handleQuickAction = (action: string) => {
-    let actionMessage = "";
-
-    switch (action) {
-      case "prayer":
-        actionMessage = "I need prayer support today.";
-        break;
-      case "verse":
-        actionMessage = "Share a daily verse with me, please.";
-        break;
-      case "question":
-        actionMessage = "I have a question about the Bible.";
-        break;
-      default:
-        actionMessage = "";
-    }
-
-    if (actionMessage) {
-      setInputMessage(actionMessage);
-    }
-  };
-
   return (
     <Card className={`flex flex-col h-full bg-white ${className}`}>
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
@@ -414,34 +392,6 @@ const ChatInterface = React.forwardRef<
       </div>
 
       <div className="p-4 border-t border-gray-200">
-        <div className="mb-3">
-          <Tabs defaultValue="quick">
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger
-                value="quick"
-                onClick={() => handleQuickAction("prayer")}
-              >
-                <BookOpen className="h-4 w-4 mr-2" />
-                Prayer Request
-              </TabsTrigger>
-              <TabsTrigger
-                value="verse"
-                onClick={() => handleQuickAction("verse")}
-              >
-                <Book className="h-4 w-4 mr-2" />
-                Daily Verse
-              </TabsTrigger>
-              <TabsTrigger
-                value="question"
-                onClick={() => handleQuickAction("question")}
-              >
-                <Calendar className="h-4 w-4 mr-2" />
-                Biblical Question
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
-        </div>
-
         <div className="flex space-x-2">
           <Input
             value={inputMessage}
