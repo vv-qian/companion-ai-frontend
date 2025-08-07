@@ -64,7 +64,7 @@ const LoginPage = ({ onAuthSuccess = () => {} }: LoginPageProps) => {
       });
 
       if (error) {
-        setError(error.message);
+        setError("Please double-check your email and/or password.");
       } else if (data.user) {
         setMessage("Signed in successfully!");
         onAuthSuccess();

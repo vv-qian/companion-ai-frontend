@@ -7,8 +7,8 @@ interface Message {
   content: string;
   sender: "user" | "ai";
   timestamp: Date;
-  scriptures?: { reference: string; text: string }[];
   isBoilerplate?: boolean;
+  response_id?: string;
 }
 
 interface UseConversationSyncProps {
@@ -120,6 +120,7 @@ export const useConversationSync = ({
           role: m.sender,
           content: m.content,
           created_at: m.timestamp.toISOString(),
+          response_id: m.response_id || null,
         }));
 
         if (toInsert.length > 0) {

@@ -5,10 +5,6 @@ interface MessageBubbleProps {
   message: string;
   isUser: boolean;
   timestamp?: string;
-  scriptureReferences?: Array<{
-    reference: string;
-    text: string;
-  }>;
 }
 
 const MessageBubble = ({
@@ -18,7 +14,6 @@ const MessageBubble = ({
     hour: "2-digit",
     minute: "2-digit",
   }),
-  scriptureReferences = [],
 }: MessageBubbleProps) => {
   return (
     <div
@@ -37,17 +32,6 @@ const MessageBubble = ({
       >
         <div className="flex flex-col">
           <p className="text-sm">{message}</p>
-
-          {scriptureReferences.length > 0 && (
-            <div className="mt-2 pt-2 border-t border-opacity-20 border-foreground">
-              {scriptureReferences.map((scripture, index) => (
-                <div key={index} className="mt-1 text-xs">
-                  <span className="font-semibold">{scripture.reference}:</span>
-                  <span className="italic"> "{scripture.text}"</span>
-                </div>
-              ))}
-            </div>
-          )}
 
           <div
             className={cn(

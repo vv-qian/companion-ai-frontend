@@ -16,7 +16,7 @@ interface Message {
   content: string;
   sender: "user" | "ai";
   timestamp: Date;
-  scriptures?: { reference: string; text: string }[];
+  response_id?: string;
 }
 
 interface MessageBubbleProps {
@@ -108,16 +108,6 @@ const MessageBubble = ({ message }: MessageBubbleProps) => {
             <div className="text-white text-sm">{message.content}</div>
           )}
         </div>
-        {isBot && message.scriptures && message.scriptures.length > 0 && (
-          <div className="mt-2 pt-2 border-t border-blue-100">
-            {message.scriptures.map((scripture, index) => (
-              <div key={index} className="text-xs">
-                <span className="font-semibold">{scripture.reference}</span>:{" "}
-                {scripture.text}
-              </div>
-            ))}
-          </div>
-        )}
 
         <div className="text-xs mt-1 opacity-70 text-right">
           {message.timestamp.toLocaleTimeString([], {
@@ -330,10 +320,17 @@ const ChatInterface = React.forwardRef<
       }))
       .slice(-20);
 
+    // Get the previous response_id from the last AI message
+    const lastAiMessage = messages
+      .filter((m) => m.sender === "ai" && !m.isBoilerplate)
+      .slice(-1)[0];
+    const previous_response_id = lastAiMessage?.response_id || null;
+
     try {
       const response = await client.post("/query", {
         user_input: newUserMessage.content,
         message_history: simplified_messages,
+        previous_response_id: previous_response_id,
       });
 
       const botResponse: Message = {
@@ -341,6 +338,7 @@ const ChatInterface = React.forwardRef<
         content: response.data.response,
         sender: "ai",
         timestamp: new Date(),
+        response_id: response.data.response_id || null,
       };
 
       setMessages((prev) => [...prev, botResponse]);
