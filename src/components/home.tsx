@@ -83,6 +83,7 @@ export default function Home() {
         content: msg.content,
         sender: msg.role as "user" | "ai",
         timestamp: new Date(msg.created_at),
+        response_id: msg.response_id || undefined,
       }));
 
       setSelectedConversationId(conversationId);

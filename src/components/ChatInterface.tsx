@@ -324,6 +324,7 @@ const ChatInterface = React.forwardRef<
     const lastAiMessage = messages
       .filter((m) => m.sender === "ai" && !m.isBoilerplate)
       .slice(-1)[0];
+
     const previous_response_id = lastAiMessage?.response_id || null;
 
     try {
