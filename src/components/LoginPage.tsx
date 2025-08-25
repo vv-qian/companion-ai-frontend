@@ -81,18 +81,7 @@ const LoginPage = ({ onAuthSuccess = () => {} }: LoginPageProps) => {
       <Card className="w-full max-w-md shadow-lg border-blue-100">
         <CardHeader className="text-center">
           <div className="flex items-center justify-center space-x-2 mb-4">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="h-8 w-8 text-blue-600"
-            >
-              <path d="M12 6v12m-8-6h16" />
-            </svg>
+            <span className="text-3xl">🌿</span>
             <h1 className="text-2xl font-bold text-gray-800">CompanionAI</h1>
           </div>
           <CardTitle className="text-xl">Welcome</CardTitle>
