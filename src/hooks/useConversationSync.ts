@@ -8,7 +8,6 @@ interface Message {
   sender: "user" | "ai";
   timestamp: Date;
   isBoilerplate?: boolean;
-  response_id?: string;
 }
 
 interface UseConversationSyncProps {
@@ -43,17 +42,17 @@ export const useConversationSync = ({
       return currentConversationIdRef.current;
     }
 
-    const { data: userRow } = await supabase
-      .from("users")
-      .select("id")
-      .eq("auth_user_id", userUUID)
-      .single();
+    // const { data: userRow } = await supabase
+    //   .from("users")
+    //   .select("id")
+    //   .eq("auth_user_id", userUUID)
+    //   .single();
 
-    const userId = userRow?.id;
+    // const userId = userRow.id;
 
     const { data: newConv, error: convErr } = await supabase
       .from("conversations")
-      .insert({ user_id: userId })
+      .insert({ auth_user_id: userUUID })
       .select("id")
       .single();
 
@@ -102,25 +101,24 @@ export const useConversationSync = ({
 
         if (unsynced.length === 0 && !force) return;
 
-        const { data: user } = await supabase
-          .from("users")
-          .select("id")
-          .eq("auth_user_id", userUUID)
-          .single();
+        // const { data: user } = await supabase
+        //   .from("users")
+        //   .select("id")
+        //   .eq("auth_user_id", userUUID)
+        //   .single();
 
-        if (!user?.id) {
-          console.error("User not found for syncing messages");
-          return;
-        }
+        // if (!user?.id) {
+        //   console.error("User not found for syncing messages");
+        //   return;
+        // }
 
         const toInsert = unsynced.map((m) => ({
           id: m.id,
-          user_id: user.id,
+          auth_user_id: userUUID,
           conversation_id: convId,
           role: m.sender,
           content: m.content,
           created_at: m.timestamp.toISOString(),
-          response_id: m.response_id || null,
         }));
 
         if (toInsert.length > 0) {

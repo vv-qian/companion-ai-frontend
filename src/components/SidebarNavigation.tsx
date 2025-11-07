@@ -47,16 +47,16 @@ const SidebarNavigation = ({
 
     try {
       // First get the user's ID from the public.users table
-      const { data: userData, error: userError } = await supabase
-        .from("users")
-        .select("id")
-        .eq("auth_user_id", userUUID)
-        .single();
+      // const { data: userData, error: userError } = await supabase
+      //   .from("users")
+      //   .select("id")
+      //   .eq("auth_user_id", userUUID)
+      //   .single();
 
-      if (userError || !userData) {
-        console.error("Error fetching user:", userError);
-        return;
-      }
+      // if (userError || !userData) {
+      //   console.error("Error fetching user:", userError);
+      //   return;
+      // }
 
       // Delete all messages for this conversation first
       const { error: messagesError } = await supabase
@@ -74,7 +74,7 @@ const SidebarNavigation = ({
         .from("conversations")
         .delete()
         .eq("id", conversationId)
-        .eq("user_id", userData.id);
+        .eq("auth_user_id", userUUID);
 
       if (conversationError) {
         console.error("Error deleting conversation:", conversationError);
@@ -101,23 +101,23 @@ const SidebarNavigation = ({
     setError(null);
 
     try {
-      // First get the user's ID from the public.users table
-      const { data: userData, error: userError } = await supabase
-        .from("users")
-        .select("id")
-        .eq("auth_user_id", userUUID)
-        .single();
+      // // First get the user's ID from the public.users table
+      // const { data: userData, error: userError } = await supabase
+      //   .from("users")
+      //   .select("id")
+      //   .eq("auth_user_id", userUUID)
+      //   .single();
 
-      if (userError) {
-        console.error("Error fetching user:", userError);
-        setError("Failed to fetch user data");
-        return;
-      }
+      // if (userError) {
+      //   console.error("Error fetching user:", userError);
+      //   setError("Failed to fetch user data");
+      //   return;
+      // }
 
-      if (!userData) {
-        setConversations([]);
-        return;
-      }
+      // if (!userData) {
+      //   setConversations([]);
+      //   return;
+      // }
 
       // Fetch conversations with their first message for preview
       const { data: conversationsData, error: conversationsError } =
@@ -134,7 +134,7 @@ const SidebarNavigation = ({
           )
         `,
           )
-          .eq("user_id", userData.id)
+          .eq("auth_user_id", userUUID)
           .order("created_at", { ascending: false });
 
       if (conversationsError) {

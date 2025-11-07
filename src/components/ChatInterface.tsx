@@ -16,7 +16,7 @@ interface Message {
   content: string;
   sender: "user" | "ai";
   timestamp: Date;
-  response_id?: string;
+  isBoilerplate?: boolean;
 }
 
 interface MessageBubbleProps {
@@ -137,7 +137,7 @@ const ChatInterface = React.forwardRef<
     {
       id: crypto.randomUUID(),
       content:
-        "Welcome to Companion AI. How may I assist you on your faith journey today?",
+        "Welcome to Companion AI. What would you like to discuss? 欢迎来到 Companion AI。您想讨论什么？",
       sender: "ai",
       timestamp: new Date(),
       isBoilerplate: true,
@@ -320,18 +320,10 @@ const ChatInterface = React.forwardRef<
       }))
       .slice(-20);
 
-    // Get the previous response_id from the last AI message
-    const lastAiMessage = messages
-      .filter((m) => m.sender === "ai" && !m.isBoilerplate)
-      .slice(-1)[0];
-
-    const previous_response_id = lastAiMessage?.response_id || null;
-
     try {
       const response = await client.post("/query", {
         user_input: newUserMessage.content,
-        message_history: simplified_messages,
-        previous_response_id: previous_response_id,
+        conversation_history: JSON.stringify(simplified_messages),
       });
 
       const botResponse: Message = {
@@ -339,7 +331,6 @@ const ChatInterface = React.forwardRef<
         content: response.data.response,
         sender: "ai",
         timestamp: new Date(),
-        response_id: response.data.response_id || null,
       };
 
       setMessages((prev) => [...prev, botResponse]);
@@ -349,7 +340,7 @@ const ChatInterface = React.forwardRef<
       const errorMessage: Message = {
         id: crypto.randomUUID(),
         content:
-          "I apologize, but I'm having trouble connecting right now. Please try again in a moment.",
+          "I apologize, but I'm having trouble connecting right now. Please try again in a moment. 抱歉，我现在连接有问题。请稍后重试。",
         sender: "ai",
         timestamp: new Date(),
       };

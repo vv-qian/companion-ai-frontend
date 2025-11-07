@@ -54,18 +54,6 @@ export default function Home() {
     setConversationError(null);
 
     try {
-      const { data: userData, error: userError } = await supabase
-        .from("users")
-        .select("id")
-        .eq("auth_user_id", userUUID)
-        .single();
-
-      if (userError || !userData) {
-        console.error("Error fetching user:", userError);
-        setConversationError("Could not fetch user data. Please try again.");
-        return;
-      }
-
       const { data: messagesData, error: messagesError } = await supabase
         .from("conversation_messages")
         .select("*")
@@ -83,7 +71,6 @@ export default function Home() {
         content: msg.content,
         sender: msg.role as "user" | "ai",
         timestamp: new Date(msg.created_at),
-        response_id: msg.response_id || undefined,
       }));
 
       setSelectedConversationId(conversationId);

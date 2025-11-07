@@ -7,8 +7,6 @@ export type Json =
   | Json[];
 
 export type Database = {
-  // Allows to automatically instanciate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "12.2.3 (519615d)";
   };
@@ -21,7 +19,7 @@ export type Database = {
           created_at: string | null;
           id: string;
           role: string;
-          user_id: string | null;
+          auth_user_id: string | null;
         };
         Insert: {
           content: string;
@@ -29,7 +27,7 @@ export type Database = {
           created_at?: string | null;
           id?: string;
           role: string;
-          user_id?: string | null;
+          auth_user_id?: string | null;
         };
         Update: {
           content?: string;
@@ -37,7 +35,7 @@ export type Database = {
           created_at?: string | null;
           id?: string;
           role?: string;
-          user_id?: string | null;
+          auth_user_id?: string | null;
         };
         Relationships: [
           {
@@ -48,10 +46,10 @@ export type Database = {
             referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "conversation_messages_user_id_fkey";
+            foreignKeyName: "fk_conversation_messages_auth_user_id_auth_users";
             columns: ["user_id"];
             isOneToOne: false;
-            referencedRelation: "users";
+            referencedRelation: "auth.users";
             referencedColumns: ["id"];
           },
         ];
@@ -60,24 +58,24 @@ export type Database = {
         Row: {
           created_at: string | null;
           id: string;
-          user_id: string | null;
+          auth_user_id: string | null;
         };
         Insert: {
           created_at?: string | null;
           id?: string;
-          user_id?: string | null;
+          auth_user_id?: string | null;
         };
         Update: {
           created_at?: string | null;
           id?: string;
-          user_id?: string | null;
+          auth_user_id?: string | null;
         };
         Relationships: [
           {
-            foreignKeyName: "conversations_user_id_fkey";
+            foreignKeyName: "fk_conversations_auth_user_id_auth_users";
             columns: ["user_id"];
             isOneToOne: false;
-            referencedRelation: "users";
+            referencedRelation: "auth.users";
             referencedColumns: ["id"];
           },
         ];

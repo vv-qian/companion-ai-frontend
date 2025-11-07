@@ -2,13 +2,13 @@ import { createClient } from "@supabase/supabase-js";
 import { Database } from "@/types/supabase";
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseServiceKey = import.meta.env.VITE_SUPABASE_SERVICE_KEY;
+const supabaseClientKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-if (!supabaseUrl || !supabaseServiceKey) {
+if (!supabaseUrl || !supabaseClientKey) {
   throw new Error("Missing Supabase environment variables");
 }
 
-export const supabase = createClient<Database>(supabaseUrl, supabaseServiceKey);
+export const supabase = createClient<Database>(supabaseUrl, supabaseClientKey);
 
 // Function to get current user (requires authentication)
 export const getCurrentUser = async () => {
@@ -17,7 +17,6 @@ export const getCurrentUser = async () => {
       data: { user },
       error: userError,
     } = await supabase.auth.getUser();
-
     if (userError) {
       console.error("Error getting user:", userError);
       return null;
