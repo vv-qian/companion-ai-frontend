@@ -32,6 +32,7 @@ export const useConversationSync = ({
   const isSyncingRef = useRef(false);
   const isInitializedRef = useRef(false);
   const syncTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   const ensureConversationExists = useCallback(async (): Promise<
     string | null
@@ -41,14 +42,6 @@ export const useConversationSync = ({
     if (currentConversationIdRef.current) {
       return currentConversationIdRef.current;
     }
-
-    // const { data: userRow } = await supabase
-    //   .from("users")
-    //   .select("id")
-    //   .eq("auth_user_id", userUUID)
-    //   .single();
-
-    // const userId = userRow.id;
 
     const { data: newConv, error: convErr } = await supabase
       .from("conversations")
@@ -77,17 +70,32 @@ export const useConversationSync = ({
   }, []);
 
   const syncMessages = useCallback(
-    async (force = false) => {
+    async (force = false, targetConversationId?: string) => {
       if (!userUUID || !isAuthenticated) return;
       if (isSyncingRef.current && !force) return;
+
+      // Abort any ongoing sync
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+      abortControllerRef.current = new AbortController();
 
       isSyncingRef.current = true;
 
       try {
+        // Use explicit target conversation ID if provided, otherwise use current
         const convId =
+          targetConversationId ||
           currentConversationIdRef.current ||
           (await ensureConversationExists());
+        
         if (!convId) return;
+
+        // Double-check we're syncing to the correct conversation
+        if (targetConversationId && convId !== targetConversationId) {
+          console.warn("Conversation ID mismatch, aborting sync");
+          return;
+        }
 
         if (!isInitializedRef.current) {
           await loadSyncedMessages(convId);
@@ -100,17 +108,6 @@ export const useConversationSync = ({
         );
 
         if (unsynced.length === 0 && !force) return;
-
-        // const { data: user } = await supabase
-        //   .from("users")
-        //   .select("id")
-        //   .eq("auth_user_id", userUUID)
-        //   .single();
-
-        // if (!user?.id) {
-        //   console.error("User not found for syncing messages");
-        //   return;
-        // }
 
         const toInsert = unsynced.map((m) => ({
           id: m.id,
@@ -137,9 +134,14 @@ export const useConversationSync = ({
           );
         }
       } catch (err) {
+        if (err instanceof Error && err.name === 'AbortError') {
+          console.log("Sync aborted");
+          return;
+        }
         console.error("Error syncing messages", err);
       } finally {
         isSyncingRef.current = false;
+        abortControllerRef.current = null;
       }
     },
     [
@@ -161,17 +163,20 @@ export const useConversationSync = ({
     if (conversationId !== currentConversationIdRef.current) {
       (async () => {
         // Always sync current messages before switching conversations
-        if (currentConversationIdRef.current && messages.length > 0) {
+        // Pass the OLD conversation ID explicitly to ensure messages go to the right place
+        const oldConversationId = currentConversationIdRef.current;
+        if (oldConversationId && messages.length > 0) {
           const unsyncedMessages = messages.filter(
             (m) =>
               !syncedMessageIdsRef.current.has(m.id) &&
               !isBoilerplateMessage(m),
           );
           if (unsyncedMessages.length > 0) {
-            await syncMessages(true);
+            await syncMessages(true, oldConversationId);
           }
         }
 
+        // Now switch to the new conversation
         currentConversationIdRef.current = conversationId || null;
         isInitializedRef.current = false;
         syncedMessageIdsRef.current.clear();
@@ -194,7 +199,7 @@ export const useConversationSync = ({
 
     // Sync immediately for new messages, with a short debounce
     syncTimeoutRef.current = setTimeout(() => {
-      syncMessages();
+      syncMessages(false, currentConversationIdRef.current || undefined);
     }, 1000);
 
     return () => {
@@ -204,20 +209,29 @@ export const useConversationSync = ({
 
   useEffect(() => {
     const handleUnload = () => {
-      // Force immediate sync on page unload
-      syncMessages(true);
+      // Force immediate sync on page unload with explicit conversation ID
+      const convId = currentConversationIdRef.current;
+      if (convId) {
+        syncMessages(true, convId);
+      }
     };
 
     const handleVisibilityChange = () => {
       if (document.visibilityState === "hidden") {
-        // Force immediate sync when page becomes hidden
-        syncMessages(true);
+        // Force immediate sync when page becomes hidden with explicit conversation ID
+        const convId = currentConversationIdRef.current;
+        if (convId) {
+          syncMessages(true, convId);
+        }
       }
     };
 
     const handlePageHide = () => {
       // Additional handler for mobile browsers
-      syncMessages(true);
+      const convId = currentConversationIdRef.current;
+      if (convId) {
+        syncMessages(true, convId);
+      }
     };
 
     window.addEventListener("beforeunload", handleUnload);
@@ -232,7 +246,10 @@ export const useConversationSync = ({
   }, [syncMessages]);
 
   const forceSyncMessages = useCallback(() => {
-    syncMessages(true);
+    const convId = currentConversationIdRef.current;
+    if (convId) {
+      syncMessages(true, convId);
+    }
   }, [syncMessages]);
 
   return {
