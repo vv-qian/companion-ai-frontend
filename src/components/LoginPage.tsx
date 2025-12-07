@@ -12,6 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
 import { Loader2, ArrowLeft } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import { AppIcon } from "./AppIcon";
 
 interface LoginPageProps {
   onAuthSuccess?: () => void;
@@ -249,15 +250,14 @@ const LoginPage = ({ onAuthSuccess = () => {} }: LoginPageProps) => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white flex items-center justify-center p-4">
-      <Card className="w-full max-w-md shadow-lg border-blue-100">
+    <div className="min-h-screen bg-gradient-to-b from-secondary to-background flex items-center justify-center p-4">
+      <Card className="w-full max-w-md shadow-lg border-teal/20">
         <CardHeader className="text-center">
-          <div className="flex items-center justify-center space-x-2 mb-4">
-            <span className="text-3xl">🌿</span>
+          <div className="flex items-center justify-center gap-2 mb-4">
+            <AppIcon size={32} />
             <h1 className="text-2xl font-bold text-gray-800">CompanionAI</h1>
           </div>
           <CardTitle className="text-xl">Welcome</CardTitle>
-          <CardDescription>Sign in to use CompanionAI</CardDescription>
         </CardHeader>
         <CardContent>
           {!showResetPassword ? (
@@ -307,7 +307,7 @@ const LoginPage = ({ onAuthSuccess = () => {} }: LoginPageProps) => {
                     <button
                       type="button"
                       onClick={() => setShowResetPassword(true)}
-                      className="text-sm text-gray-600 hover:text-gray-800"
+                      className="text-sm text-gray-600 hover:text-gray-800 hover:opacity-65 transition-opacity"
                       disabled={loading}
                     >
                       Forgot password?

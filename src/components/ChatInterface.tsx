@@ -8,6 +8,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useConversationSync } from "@/hooks/useConversationSync";
 import Markdown from "markdown-to-jsx";
 import axios from "axios";
+import { AppIcon } from "./AppIcon";
 
 const backendUrl = import.meta.env.VITE_BACKEND_SERVER_URL;
 
@@ -31,7 +32,7 @@ const MessageBubble = ({ message }: MessageBubbleProps) => {
     <div className={`flex ${isBot ? "justify-start" : "justify-end"}`}>
       <div
         className={`max-w-[80%] rounded-lg p-3 ${
-          isBot ? "bg-blue-50 text-gray-800" : "bg-blue-600 text-white"
+          isBot ? "bg-secondary text-foreground" : "bg-teal text-white"
         }`}
       >
         <div className="text-sm prose prose-sm max-w-none">
@@ -86,7 +87,7 @@ const MessageBubble = ({ message }: MessageBubbleProps) => {
                   code: {
                     component: (props) => (
                       <code
-                        className="bg-blue-100 px-1 py-0.5 rounded text-xs"
+                        className="bg-secondary px-1 py-0.5 rounded text-xs"
                         {...props}
                       />
                     ),
@@ -94,7 +95,7 @@ const MessageBubble = ({ message }: MessageBubbleProps) => {
                   blockquote: {
                     component: (props) => (
                       <blockquote
-                        className="border-l-2 border-blue-300 pl-2 italic"
+                        className="border-l-2 border-teal/30 pl-2 italic"
                         {...props}
                       />
                     ),
@@ -368,7 +369,7 @@ const ChatInterface = React.forwardRef<
         {isLoadingConversation ? (
           <div className="flex items-center justify-center h-full">
             <div className="text-center">
-              <Loader2 className="h-8 w-8 animate-spin text-blue-600 mx-auto mb-4" />
+              <AppIcon size={32} animate={true} className="mx-auto mb-4" />
               <p className="text-gray-600">Loading conversation...</p>
             </div>
           </div>
@@ -379,9 +380,9 @@ const ChatInterface = React.forwardRef<
             ))}
             {isLoading && (
               <div className="flex justify-start">
-                <div className="max-w-[80%] rounded-lg p-3 bg-blue-50 text-gray-800">
+                <div className="max-w-[80%] rounded-lg p-3 bg-secondary text-foreground">
                   <div className="flex items-center space-x-2">
-                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <AppIcon size={16} animate={true} />
                     <span className="text-sm">Seeking guidance...</span>
                   </div>
                 </div>
@@ -416,11 +417,11 @@ const ChatInterface = React.forwardRef<
           />
           <Button
             onClick={handleSendMessage}
-            className="bg-blue-600 hover:bg-blue-700"
+            className="bg-teal hover:bg-teal-strong"
             disabled={isLoading}
           >
             {isLoading ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
+              <AppIcon size={16} animate={true} />
             ) : (
               <Send className="h-4 w-4" />
             )}

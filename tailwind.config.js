@@ -17,7 +17,29 @@ module.exports = {
       },
     },
     extend: {
+      fontFamily: {
+        sans: ["Inter", "system-ui", "sans-serif"],
+      },
       colors: {
+        // Design System Colors
+        teal: {
+          DEFAULT: "#66A9A2",
+          strong: "#18716A",
+        },
+        accent: {
+          DEFAULT: "#66A9A2",
+          strong: "#18716A",
+        },
+        yellow: {
+          DEFAULT: "#FFD26A",
+        },
+        danger: {
+          DEFAULT: "#EF4444",
+        },
+        info: {
+          DEFAULT: "#2563EB",
+        },
+        // Semantic colors using CSS variables for light/dark mode
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
@@ -38,10 +60,6 @@ module.exports = {
         muted: {
           DEFAULT: "hsl(var(--muted))",
           foreground: "hsl(var(--muted-foreground))",
-        },
-        accent: {
-          DEFAULT: "hsl(var(--accent))",
-          foreground: "hsl(var(--accent-foreground))",
         },
         popover: {
           DEFAULT: "hsl(var(--popover))",

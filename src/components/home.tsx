@@ -8,6 +8,7 @@ import { supabase } from "@/lib/supabase";
 import ChatInterface from "./ChatInterface";
 import SidebarNavigation from "./SidebarNavigation";
 import LoginPage from "./LoginPage";
+import { AppIcon } from "./AppIcon";
 
 interface Message {
   id: string;
@@ -121,7 +122,7 @@ export default function Home() {
         </p>
         <button
           onClick={() => window.location.reload()}
-          className="px-4 py-2 bg-blue-600 text-white rounded"
+          className="px-4 py-2 bg-teal text-white rounded"
         >
           Retry
         </button>
@@ -140,7 +141,7 @@ export default function Home() {
               variant="outline"
               size="sm"
               onClick={startNewChat}
-              className="flex items-center space-x-1 bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200"
+              className="flex items-center space-x-1 bg-secondary hover:bg-secondary/80 text-teal-strong border-teal/30"
             >
               <Plus className="h-4 w-4" />
               <span>New Chat</span>
@@ -167,7 +168,7 @@ export default function Home() {
             onValueChange={setActiveTab}
             className="h-full flex flex-col"
           >
-            <TabsList className="mx-6 mt-2 bg-blue-50">
+            <TabsList className="mx-6 mt-2 bg-secondary">
               <TabsTrigger value="chat">Chat</TabsTrigger>
               <TabsTrigger value="history">Conversation History</TabsTrigger>
             </TabsList>
@@ -175,7 +176,7 @@ export default function Home() {
             <TabsContent value="chat" className="flex-1 p-0 overflow-hidden">
               {loadingConversation ? (
                 <div className="h-full flex items-center justify-center">
-                  <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
+                  <AppIcon size={24} animate={true} />
                   <span className="ml-2 text-gray-600">
                     Loading conversation...
                   </span>
