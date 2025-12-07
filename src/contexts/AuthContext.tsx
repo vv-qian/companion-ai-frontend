@@ -32,6 +32,39 @@ interface AuthProviderProps {
   children: React.ReactNode;
 }
 
+// Utility function to clear all user data from storage
+const clearUserData = (userId?: string | null) => {
+  try {
+    // Clear user-specific items if userId is provided
+    if (userId) {
+      localStorage.removeItem(`companionai-messages-${userId}`);
+      localStorage.removeItem(`companionai-input-${userId}`);
+    }
+    
+    // Clear all localStorage items that start with companionai-
+    const keysToRemove: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith('companionai-')) {
+        keysToRemove.push(key);
+      }
+    }
+    keysToRemove.forEach(key => localStorage.removeItem(key));
+
+    // Clear sessionStorage as well
+    sessionStorage.clear();
+
+    // Clear any Supabase session data from localStorage
+    Object.keys(localStorage).forEach(key => {
+      if (key.startsWith('sb-') || key.includes('supabase')) {
+        localStorage.removeItem(key);
+      }
+    });
+  } catch (err) {
+    console.error("Error clearing user data:", err);
+  }
+};
+
 export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [user, setUser] = useState<User | null>(null);
   const [userUUID, setUserUUID] = useState<string | null>(null);
@@ -80,6 +113,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         setIsAuthenticated(true);
         setError(null);
       } else if (event === "SIGNED_OUT") {
+        // Clear all user data when signed out
+        clearUserData();
         setUser(null);
         setUserUUID(null);
         setIsAuthenticated(false);
@@ -93,12 +128,17 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   const handleSignOut = async () => {
     try {
+      const currentUserId = userUUID;
+      
       // Trigger any pending syncs before signing out
       const event = new CustomEvent("beforeSignOut");
       window.dispatchEvent(event);
 
       // Small delay to allow sync to complete
       await new Promise((resolve) => setTimeout(resolve, 1000));
+
+      // Clear all user data before signing out
+      clearUserData(currentUserId);
 
       await signOut();
       setUser(null);
@@ -107,6 +147,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     } catch (err) {
       console.error("Sign out error:", err);
       setError("Failed to sign out");
+      // Still clear data even if sign out fails
+      clearUserData(userUUID);
     }
   };
 
